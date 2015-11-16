@@ -16,9 +16,10 @@ from std_msgs.msg import Empty         # for land/takeoff/emergency
 pubtakeoff = rospy.Publisher('/ardrone/takeoff', Empty, queue_size=10)
 publand = rospy.Publisher('/ardrone/land', Empty, queue_size=10)
 uniq=Empty()
-status=0;
+status=0
 def navdata_status_callback(data):
     status=data.state
+    print status
 
 class image_converter:
 
@@ -85,7 +86,7 @@ def main(args):
   
   ic = image_converter()
   rospy.init_node('image_converter', anonymous=True)
-  while status == 0:
+  while (status !=6):
     pubtakeoff.publish(Empty)
     rospy.spin()
 
