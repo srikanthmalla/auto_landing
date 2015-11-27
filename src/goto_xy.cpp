@@ -12,8 +12,8 @@ void state_callback(const nav_msgs::Odometry p)
   error= 6-p.pose.pose.position.x; 
   error_yaw= -p.pose.pose.orientation.z; 
   vel.linear.x=0.3*error;
-  vel.linear.y=0;
-  vel.linear.z=0;
+  vel.linear.y=-0.3*p.pose.pose.position.y;
+  vel.linear.z=0.3*(5-p.pose.pose.position.z);
   vel.angular.x=0;
   vel.angular.y=0;
   vel.angular.z=0.3*error_yaw;

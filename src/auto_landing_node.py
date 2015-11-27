@@ -4,22 +4,26 @@ roslib.load_manifest('auto_landing')
 import sys
 import rospy
 import cv2
+
+from geometry_msgs.msg import Twist
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
-
 from ardrone_autonomy.msg import Navdata
 from geometry_msgs.msg import Twist      # for sending commands to the drone
 from std_msgs.msg import Empty         # for land/takeoff/emergency
-
+from nav_msgs.msg import Odometry
 pubtakeoff = rospy.Publisher('/ardrone/takeoff', Empty, queue_size=10)
-publand = rospy.Publisher('/ardrone/land', Empty, queue_size=10)
+publand = rospy.Publisher('/ardrone/land', Empty, queue_size=100)
+pub_xy_control=rospy.Publisher('cmd_vel',Twist,queue_size=10)
 uniq=Empty()
 status=0
+vel=Twist()
 def navdata_status_callback(data):
     status=data.state
-    print status
+    # print status
+
 
 class image_converter:
 
@@ -30,7 +34,7 @@ class image_converter:
     self.bridge = CvBridge()
     self.image_sub = rospy.Subscriber("ardrone/bottom/image_raw",Image,self.callback)
     self.status_sub= rospy.Subscriber("ardrone/navdata",Navdata,navdata_status_callback)
-
+    #self.ground_sub= rospy.Subscriber("ground_truth/state",Odometry, ground_state_callback) 
   def callback(self,data):
     try:
       cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
@@ -66,6 +70,12 @@ class image_converter:
     cx,cy = int(M['m10']/M['m00']), int(M['m01']/M['m00'])
     cv2.circle(frame,(cx,cy),5,255,-1)
 
+    size = frame.shape
+    framey = size[0]/2
+    framex = size[1]/2
+
+    # ROS_INFO("imgx:%f,imgy:%f,framex:%f,framey:%f",cx,cy,framex,framey)
+
     # Show it, if key pressed is 'Esc', exit the loop
     cv2.imshow('frame',frame)
     cv2.imshow('thresh',thresh2)
@@ -76,11 +86,38 @@ class image_converter:
 
     cv2.imshow("Image window", cv_image)
     cv2.waitKey(3)
+    
+    error_x= -cx+framex
+    error_y= -cy+framey
+    vel.linear.y=0.001*error_x #image xy are diff from normal xy
+    vel.linear.x=0.001*error_y
+    vel.linear.z=0
+    vel.angular.x=0
+    vel.angular.y=0
+    vel.angular.z=0
+    pub_xy_control.publish(vel)
+    print framex, framey, cx, cy, error_x, error_y
+       
+    if (abs(error_x) <= (20)) & (abs(error_y) <=20) :
+      while(1): 
+        vel.linear.y=0 #image xy are diff from normal xy
+        vel.linear.x=0
+        vel.linear.z=-10
+        vel.angular.x=0
+        vel.angular.y=0
+        vel.angular.z=0
+        pub_xy_control.publish(vel)
+        print "enter"
 
+    
     try:
        self.image_pub.publish(self.bridge.cv2_to_imgmsg(frame, "bgr8"))
     except CvBridgeError, e:
        print e
+
+
+
+
 
 def main(args):
   
