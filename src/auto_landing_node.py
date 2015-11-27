@@ -28,7 +28,7 @@ class image_converter:
 
     cv2.namedWindow("Image window", 1)
     self.bridge = CvBridge()
-    self.image_sub = rospy.Subscriber("ardrone/front/image_raw",Image,self.callback)
+    self.image_sub = rospy.Subscriber("ardrone/bottom/image_raw",Image,self.callback)
     self.status_sub= rospy.Subscriber("ardrone/navdata",Navdata,navdata_status_callback)
 
   def callback(self,data):
@@ -87,7 +87,6 @@ def main(args):
   ic = image_converter()
   rospy.init_node('image_converter', anonymous=True)
   while (status !=6):
-    pubtakeoff.publish(Empty)
     rospy.spin()
 
   try:
